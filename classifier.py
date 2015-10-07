@@ -6,7 +6,26 @@ from lasagne.updates import nesterov_momentum
 from nolearn.lasagne import NeuralNet, BatchIterator
 from lasagne import layers, nonlinearities, updates, init, objectives
 from nolearn.lasagne.handlers import EarlyStopping
- 
+from nolearn.lasagne.base import objective
+from lasagne.objectives import aggregate
+from lasagne.regularization import regularize_layer_params, l2, l1
+
+lambda_regularization = 0.04
+
+def objective_with_L2(layers,
+                      loss_function,
+                      target,
+                      aggregate=aggregate,
+                      deterministic=False,
+                      get_output_kw=None):
+    reg = regularize_layer_params([layers["hidden3"]], l2)
+    loss = objective(layers, loss_function, target, aggregate, deterministic, get_output_kw)
+    
+    if deterministic is False:
+        return loss + reg * lambda_regularization
+    else:
+        return loss
+
 def build_model(hyper_parameters):
     net = NeuralNet(
     layers=[
@@ -21,6 +40,8 @@ def build_model(hyper_parameters):
     input_shape=(None, 3, 64, 64), # 3 = depth of input layer (color), 64x64 image
     use_label_encoder=True,
     verbose=1,
+    # objective function
+    objective=objective_with_L2,
     **hyper_parameters
     )  
     return net
